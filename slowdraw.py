@@ -79,18 +79,21 @@ def scalexp(v,mint,maxt,scale=5):
 def linscale(v,mint,maxt):
     return v*(maxt-mint) + mint
 
-writer = cv2.VideoWriter("slowdraw.avi",cv.CV_FOURCC(*'FMP4'),20,(w,h),1)
+fourcc = cv2.cv.FOURCC(*'XVID')
+writer = cv2.VideoWriter("slowdraw.avi",fourcc,20,(h,w),1)
 
 try:
     while not done:
         framen = curr_frame % len(frames)
         frame = frames[curr_frame % len(frames)]
         cv2.imshow('slowdraw', frame  )
-        tmaxtime, tmintime = get_times(len(frames))
+        tmaxtime, tmintime = get_times(len(frames))        
         wait = linscale( (framen + 1.0) / len(frames) , tmintime,tmaxtime)
         print(wait,tmaxtime,tmintime)
         curr_frame += 1
-        writer.write(frame)
+        for i in range(0,min(1,int(wait)/50)):
+            writer.write(frame)
+        # TODO: fix the wait time
         k = cv2.waitKey(int(wait)) & 0xff
         if k == 27:
             done = True
@@ -101,7 +104,7 @@ except KeyboardInterrupt:
 
 # pickle.dump(frames,file('slowdraw.pkl','wb'))
 
-del writer
+writer.release()
 
 observer.stop()
 observer.join()

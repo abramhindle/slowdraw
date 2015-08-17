@@ -58,7 +58,7 @@ maxtime = 1000/2
 mintime = 1000/30
 
 #           2     4    8     16    32    64     128   256    512
-maxtimes = [2000,2000,2000, 1000, 1000, 2000,  3000, 3000,  4000, 4000]
+maxtimes = [2000,2000,2000, 1000, 1000, 1000,  1000, 1000,  1000, 1000]
 mintimes = [1000,1000,1000, 1000,  500,  200,   100,   50,    50,   50]
 
 def get_times(nframes):
@@ -80,18 +80,19 @@ def linscale(v,mint,maxt):
     return v*(maxt-mint) + mint
 
 fourcc = cv2.cv.FOURCC(*'XVID')
-writer = cv2.VideoWriter("slowdraw.avi",fourcc,20,(h,w),1)
-
+writer = cv2.VideoWriter("slowdraw.avi",fourcc,30,(h,w),1)
+frametime = 1000.0/30.0
 try:
     while not done:
         framen = curr_frame % len(frames)
         frame = frames[curr_frame % len(frames)]
         cv2.imshow('slowdraw', frame  )
         tmaxtime, tmintime = get_times(len(frames))        
-        wait = linscale( (framen + 1.0) / len(frames) , tmintime,tmaxtime)
+        wait = scalexp( (framen + 1.0) / len(frames) , tmintime,tmaxtime)
         print(wait,tmaxtime,tmintime)
         curr_frame += 1
-        for i in range(0,min(1,int(wait)/50)):
+        for i in range(0,max(1,int(wait/frametime))):
+            print("Writing frame %s %s %s" % (i,wait,wait/frametime))
             writer.write(frame)
         # TODO: fix the wait time
         k = cv2.waitKey(int(wait)) & 0xff

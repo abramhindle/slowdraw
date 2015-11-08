@@ -5,6 +5,7 @@
 import sys
 import cv2
 import cv
+import numpy as np
 import logging
 import time
 import argparse
@@ -15,10 +16,17 @@ import math
 from watchdog.observers import Observer
 
 parser = argparse.ArgumentParser(description='slowdraw')
+parser.add_argument('-W', default=1024, help='Width of window')
+parser.add_argument('-H', default=768, help='Height of window')
 parser.add_argument('path', help='Path of file to watch')
 args = parser.parse_args()
+full_w = int(args.W)
+full_h = int(args.H)
 
+def new_rgb(width,height):
+    return np.zeros((height,width,3), np.uint8)
 
+fullscreen_buffer = new_rgb(full_w,full_h)
 
 logging.basicConfig(stream = sys.stderr, level=logging.INFO)
 
@@ -39,7 +47,7 @@ class ModListener(watchdog.events.FileSystemEventHandler):
 
 window_name = "slowdraw"
 fullscreen = False
-cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
+cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN | cv2.WINDOW_OPENGL)
 
 def start_fullscreen():
     global fullscreen
@@ -94,20 +102,50 @@ def scalexp(v,mint,maxt,scale=5):
 def linscale(v,mint,maxt):
     return v*(maxt-mint) + mint
 
+def maintain_aspect(maxx,maxy,x,y):
+    wr = maxx/float(x)
+    hr = maxy/float(y)
+    if hr*y <= maxy or hr*x <= maxx:
+        return (int(hr*x),int(hr*y))
+    else:
+        return (int(wr*x),int(wr*y))
+
+# maintain_aspect(1024,768,640,480)==(1024,768)
+# maintain_aspect(1024,768,608,472)==(989,768)
+# maintain_aspect(1024,768,random.randint(1,1324),random.randint(1,1324))
+
 fourcc = cv2.cv.FOURCC(*'XVID')
 writer = cv2.VideoWriter("slowdraw.avi",fourcc,30,(h,w),1)
 frametime = 1000.0/30.0
+resized_frame = None
+fs_offset_x = 0
+fs_offset_y = 0
+
+cv2.imshow('slowdraw', fullscreen_buffer  )
+
 try:
     while not done:
         framen = curr_frame % len(frames)
         frame = frames[curr_frame % len(frames)]
+        #if resized_frame == None:
+        #    (lh,lw,depth) = frame.shape
+        #    ratio = float(full_h)/float(lh)
+        #    (resized_w,resized_h) = maintain_aspect(full_w,full_h,lw,lh)
+        #    resized_frame = new_rgb(resized_w,resized_h)
+        #    fs_offset_x = (full_w - resized_w)/2
+        #    fs_offset_y = (full_h - resized_h)/2
+        #    print "%s %s %s %s" % (resized_w,resized_h,fs_offset_x, fs_offset_y)
+        #resized_frame[:,:] = cv2.resize(frame,(resized_w,resized_h))
+        #fullscreen_buffer[fs_offset_y:fs_offset_y+resized_h ,  fs_offset_x:fs_offset_x+resized_w] = resized_frame
         cv2.imshow('slowdraw', frame  )
+        #print "%s,%s,%s" % fullscreen_buffer.shape
+        #cv2.imshow('slowdraw', fullscreen_buffer  )
         tmaxtime, tmintime = get_times(len(frames))        
         wait = scalexp( (framen + 1.0) / len(frames) , tmintime,tmaxtime)
         print(wait,tmaxtime,tmintime)
         curr_frame += 1
         for i in range(0,max(1,int(wait/frametime))):
-            print("Writing frame %s %s %s" % (i,wait,wait/frametime))
+            # print("Writing frame %s %s %s" % (i,wait,wait/frametime))
             writer.write(frame)
         # TODO: fix the wait time
         k = cv2.waitKey(int(wait)) & 0xff

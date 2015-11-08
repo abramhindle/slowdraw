@@ -18,10 +18,12 @@ from watchdog.observers import Observer
 parser = argparse.ArgumentParser(description='slowdraw')
 parser.add_argument('-W', default=1024, help='Width of window')
 parser.add_argument('-H', default=768, help='Height of window')
+parser.add_argument('-strict', default=False, help='Strictness')
 parser.add_argument('path', help='Path of file to watch')
 args = parser.parse_args()
 full_w = int(args.W)
 full_h = int(args.H)
+strictness = bool(args.strict)
 
 def new_rgb(width,height):
     return np.zeros((height,width,3), np.uint8)
@@ -40,7 +42,9 @@ class ModListener(watchdog.events.FileSystemEventHandler):
 
     def on_modified(self, event):
         logging.info("Modified: "+event.src_path)
-        if (event.src_path == args.path):
+        if ((not strictness and
+             os.path.dirname(args.path) == os.path.dirname(event.src_path))
+             or event.src_path == args.path):
             logging.info( "Recorded Modified: " + event.src_path )
             self.queue.append( event.src_path )
             self.handler( event.src_path )
@@ -68,8 +72,9 @@ curr_frame = 0
 done = False
 
 def handle_frame(fname):
-    newframe = cv2.imread(fname)
-    frames.append(newframe)
+    if (len(fname) > 4 and fname[-4:] == ".png"):
+        newframe = cv2.imread(fname)
+        frames.append(newframe)
 
 mod_listener = ModListener(handle_frame)
 observer = Observer()

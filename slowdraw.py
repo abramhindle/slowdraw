@@ -36,7 +36,22 @@ class ModListener(watchdog.events.FileSystemEventHandler):
             logging.info( "Recorded Modified: " + event.src_path )
             self.queue.append( event.src_path )
             self.handler( event.src_path )
-        
+
+window_name = "slowdraw"
+fullscreen = False
+cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
+
+def start_fullscreen():
+    global fullscreen
+    global window_name
+    if not fullscreen:
+        cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.cv.CV_WINDOW_FULLSCREEN)
+        fullscreen = True
+    else:
+        cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, 0)
+        fullscreen = False
+
+
 
 frame1 = cv2.imread(args.path)
 w,h,_ = frame1.shape
@@ -99,6 +114,11 @@ try:
         if k == 27:
             done = True
             continue
+        if k == ord('f'):
+            start_fullscreen()
+            
+
+
 
 except KeyboardInterrupt:
     observer.stop()
